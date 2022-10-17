@@ -34,12 +34,12 @@ locals {
  
         {
             subnet1_name = "subnet1"
-            subnet1_address_prefix = "10.0.0.0/24"
+            subnet1_address_prefix = "10.0.2.0/24"
  
         },
         {
              subnet2_name = "subnet2"
-             subnet2_address_prefix = "10.0.1.0/24"
+             subnet2_address_prefix = "10.0.3.0/24"
  
 
         }
