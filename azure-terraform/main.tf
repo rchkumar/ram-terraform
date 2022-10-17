@@ -21,7 +21,7 @@ provider "azurerm" {
 
 locals {
  
-    resource_group_name = "ram-rg"
+    resource_group_name = "ramcheekoti-rg"
     location = "southindia"
  
      virtual_network = {
