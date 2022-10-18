@@ -17,7 +17,78 @@ provider "azurerm" {
 
 }
 
-resource "azurerm_resource_group" "ramchrg1" {
-  location = "southindia"
-  name     = "ramch-rg1"
+locals {
+
+  resource_group_name = "ramch-rg1"
+  resource_group_location = "southindia"
+
+  network = {
+    name                = "ram-vnet"
+    address_space       = ["10.0.0.0/16"]
+  }
+
+  subnets = [
+
+    {
+      name = "SubnetA"
+      address_space = ["10.0.1.0/24"]
+
+    },
+
+    {
+      name = "SubnetB"
+      address_space = ["10.0.2.0/24"]
+    }
+
+  ]
+
+  network_interface = {
+
+    name = "app-interface"
+  }
+
 }
+
+resource "azurerm_resource_group" "ramchrg1" {
+  location = local.resource_group_location
+  name     = local.resource_group_name
+}
+
+resource "azurerm_virtual_network" "ramvnet" {
+  name                = local.network.name
+  location            = local.resource_group_location
+  resource_group_name = local.resource_group_name
+  address_space       = local.network.address_space
+
+
+}
+
+
+resource "azurerm_subnet" "subnetA" {
+  name                 = local.subnets[0].name
+  resource_group_name  = local.resource_group_name
+  virtual_network_name = local.network.name
+  address_prefixes     = local.subnets[0].address_space
+
+}
+
+resource "azurerm_subnet" "subnetB" {
+  name                 = local.subnets[1].name
+  resource_group_name  = local.resource_group_name
+  virtual_network_name = local.network.name
+  address_prefixes     = local.subnets[1].address_space
+
+}
+
+resource "azurerm_network_interface" "appinterface" {
+  name                = "app-interface"
+  location            = local.resource_group_location
+  resource_group_name = local.resource_group_name
+
+  ip_configuration {
+    name                          = local.network_interface.name
+    subnet_id                     = azurerm_subnet.subnetA.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
