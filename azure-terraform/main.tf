@@ -89,6 +89,28 @@ resource "azurerm_network_interface" "appinterface" {
     name                          = local.network_interface.name
     subnet_id                     = azurerm_subnet.subnetA.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id = azurerm_public_ip.apppublicip.id
   }
 }
 
+output "SubnetA-ID" {
+  value = azurerm_subnet.subnetA.id
+}
+
+
+resource "azurerm_public_ip" "apppublicip" {
+  name                    = "app-public-ip"
+  location                = local.resource_group_location
+  resource_group_name     = local.resource_group_name
+  allocation_method       = "Static"
+
+  depends_on = [
+
+    azurerm_resource_group.ramchrg1
+  ]
+
+}
+
+output "public-ip" {
+  value = azurerm_public_ip.apppublicip.id
+}
