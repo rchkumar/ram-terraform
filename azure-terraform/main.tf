@@ -17,114 +17,204 @@ provider "azurerm" {
 
 }
 
+
 locals {
 
-  resource_group_name = "ramch-rg1"
-  resource_group_location = "southindia"
+  rg_name = "rg1-ram"
+  rg_location = "southindia"
 
-  network = {
-    name                = "ram-vnet"
-    address_space       = ["10.0.0.0/16"]
+  virtual_network = {
+
+    name = "ram-vnet"
+    address_space = ["10.0.0.0/16"]
+
   }
 
-  subnets = [
+ subnets = [
 
-    {
-      name = "SubnetA"
-      address_space = ["10.0.1.0/24"]
+   {
+     name = "SubnetA"
+     address_prefixes     = ["10.0.1.0/24"]
 
-    },
+   },
 
-    {
-      name = "SubnetB"
-      address_space = ["10.0.2.0/24"]
-    }
+   {
+     name = "SubnetB"
+     address_prefixes     = ["10.0.2.0/24"]
 
-  ]
+   }
 
-  network_interface = {
+ ]
 
-    name = "app-interface"
-  }
 
 }
 
-resource "azurerm_resource_group" "ramchrg1" {
-  location = local.resource_group_location
-  name     = local.resource_group_name
+resource "azurerm_resource_group" "rgname" {
+  name     = local.rg_name
+  location = local.rg_location
 }
 
-resource "azurerm_virtual_network" "ramvnet" {
-  name                = local.network.name
-  location            = local.resource_group_location
-  resource_group_name = local.resource_group_name
-  address_space       = local.network.address_space
+resource "azurerm_virtual_network" "example" {
+  name                = local.virtual_network.name
+  location            = local.rg_location
+  resource_group_name = local.rg_name
+  address_space       = local.virtual_network.address_space
 
- depends_on = [
+  depends_on = [
 
-    azurerm_resource_group.ramchrg1
+    azurerm_resource_group.rgname
   ]
 
 }
+
 
 
 resource "azurerm_subnet" "subnetA" {
   name                 = local.subnets[0].name
-  resource_group_name  = local.resource_group_name
-  virtual_network_name = local.network.name
-  address_prefixes     = local.subnets[0].address_space
-
+  resource_group_name  = local.rg_name
+  virtual_network_name = local.virtual_network.name
+  address_prefixes     = local.subnets[0].address_prefixes
    depends_on = [
 
-    azurerm_virtual_network.ramvnet
+    azurerm_resource_group.rgname
+
   ]
 
-}
+  }
+
 
 resource "azurerm_subnet" "subnetB" {
+
   name                 = local.subnets[1].name
-  resource_group_name  = local.resource_group_name
-  virtual_network_name = local.network.name
-  address_prefixes     = local.subnets[1].address_space
+  resource_group_name  = local.rg_name
+  virtual_network_name = local.virtual_network.name
+  address_prefixes     = local.subnets[1].address_prefixes
+    depends_on = [
 
- depends_on = [
+    azurerm_resource_group.rgname
 
-    azurerm_virtual_network.ramvnet
   ]
 
-}
 
-resource "azurerm_network_interface" "appinterface" {
-  name                = "app-interface"
-  location            = local.resource_group_location
-  resource_group_name = local.resource_group_name
+
+  }
+
+resource "azurerm_network_interface" "ramnic" {
+  name                = "ram-nic"
+  location            = local.rg_location
+  resource_group_name = local.rg_name
 
   ip_configuration {
-    name                          = local.network_interface.name
+    name                          = "internal"
     subnet_id                     = azurerm_subnet.subnetA.id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id = azurerm_public_ip.apppublicip.id
   }
-}
 
-output "SubnetA-ID" {
-  value = azurerm_subnet.subnetA.id
+  depends_on = [
+
+     azurerm_resource_group.rgname
+  ]
 }
 
 
 resource "azurerm_public_ip" "apppublicip" {
-  name                    = "app-public-ip"
-  location                = local.resource_group_location
-  resource_group_name     = local.resource_group_name
-  allocation_method       = "Static"
+  name                = "app-publicip"
+  resource_group_name = local.rg_name
+  location            = local.rg_location
+  allocation_method   = "Static"
 
-  depends_on = [
+   depends_on = [
 
-    azurerm_resource_group.ramchrg1
+     azurerm_resource_group.rgname
   ]
 
 }
 
-output "public-ip" {
+resource "azurerm_network_security_group" "nsgram" {
+  name                = "nsg-ram"
+  resource_group_name = local.rg_name
+  location            = local.rg_location
+
+  security_rule {
+    name                       = "test123"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+     depends_on = [
+
+     azurerm_resource_group.rgname
+  ]
+}
+
+
+
+resource "azurerm_subnet_network_security_group_association" "example" {
+  subnet_id                 = azurerm_subnet.subnetA.id
+  network_security_group_id = azurerm_network_security_group.nsgram.id
+
+}
+
+
+resource "azurerm_linux_virtual_machine" "vm1test" {
+  name                = "vm1-test"
+  resource_group_name = local.rg_name
+  location            = local.rg_location
+  size                = "Standard_F2"
+  admin_username      = "adminuser"
+  network_interface_ids = [
+    azurerm_network_interface.ramnic.id
+  ]
+
+  admin_ssh_key {
+    username   = "adminuser"
+    public_key = file("~/.ssh/id_rsa.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "16.04-LTS"
+    version   = "latest"
+  }
+}
+
+output "azurenetwork-id" {
+  value = azurerm_virtual_network.example.id
+}
+
+output "subnetA-id" {
+  value = azurerm_subnet.subnetA.id
+}
+
+output "subnetB-id" {
+  value = azurerm_subnet.subnetB.id
+}
+
+output "public-ip-id" {
   value = azurerm_public_ip.apppublicip.id
+}
+
+output "rg-id" {
+  value = azurerm_resource_group.rgname.id
+}
+
+output "nsg-id" {
+  value = azurerm_network_security_group.nsgram.id
+}
+
+output "nic-id" {
+  value = azurerm_network_interface.ramnic.id
 }
