@@ -93,12 +93,29 @@ resource "azurerm_network_interface" "ramnic" {
 
   depends_on = [
 
-     azurerm_resource_group.rgname,
-     azurerm_subnet.subnetA
+     azurerm_resource_group.rgname
+
   ]
 }
 
+resource "azurerm_network_interface" "ramnic2" {
+  name                = "ram-nic2"
+  location            = local.rg_location
+  resource_group_name = local.rg_name
 
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.subnetA.id
+    private_ip_address_allocation = "Dynamic"
+
+  }
+
+  depends_on = [
+
+     azurerm_resource_group.rgname
+
+  ]
+}
 resource "azurerm_public_ip" "apppublicip" {
   name                = "app-publicip"
   resource_group_name = local.rg_name
@@ -151,7 +168,8 @@ resource "azurerm_linux_virtual_machine" "vm1test" {
   size                = "Standard_F2"
   admin_username      = "adminuser"
   network_interface_ids = [
-    azurerm_network_interface.ramnic.id
+    azurerm_network_interface.ramnic.id,
+    azurerm_network_interface.ramnic2.id
   ]
 
   admin_ssh_key {
