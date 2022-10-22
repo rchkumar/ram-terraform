@@ -190,30 +190,21 @@ resource "azurerm_linux_virtual_machine" "vm1test" {
   }
 }
 
-output "azurenetwork-id" {
-  value = azurerm_virtual_network.example.id
+resource "azurerm_managed_disk" "extradisk" {
+  name                 = "extra-disk"
+  resource_group_name = local.rg_name
+  location            = local.rg_location
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = "1"
+
+
 }
 
-output "subnetA-id" {
-  value = azurerm_subnet.subnetA.id
+resource "azurerm_virtual_machine_data_disk_attachment" "example" {
+  managed_disk_id    = azurerm_managed_disk.extradisk.id
+  virtual_machine_id = azurerm_linux_virtual_machine.vm1test.id
+  lun                = "10"
+  caching            = "ReadWrite"
 }
 
-output "subnetB-id" {
-  value = azurerm_subnet.subnetB.id
-}
-
-output "public-ip-id" {
-  value = azurerm_public_ip.apppublicip.id
-}
-
-output "rg-id" {
-  value = azurerm_resource_group.rgname.id
-}
-
-output "nsg-id" {
-  value = azurerm_network_security_group.nsgram.id
-}
-
-output "nic-id" {
-  value = azurerm_network_interface.ramnic.id
-}
