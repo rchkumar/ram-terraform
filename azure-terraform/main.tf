@@ -1,3 +1,4 @@
+
 locals {
 
   rg_name = "rg1-ram"
@@ -33,7 +34,7 @@ resource "azurerm_resource_group" "rgname" {
   name     = local.rg_name
   location = local.rg_location
 }
-
+/*
 resource "azurerm_virtual_network" "example" {
   name                = local.virtual_network.name
   location            = local.rg_location
@@ -208,3 +209,14 @@ resource "azurerm_virtual_machine_data_disk_attachment" "example" {
   caching            = "ReadWrite"
 }
 
+*/
+
+resource "azurerm_storage_account" "23232312121212' {
+  name                     = "${count.index}-ramcheekoti-storage"
+  resource_group_name      = local.rg_name
+  location                 = local.rg_location
+  account_tier             = "Standard"
+  account_replication_type = "GRS"
+
+
+}
